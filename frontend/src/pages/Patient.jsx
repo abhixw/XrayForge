@@ -26,88 +26,117 @@ function Patient() {
         fetchCase();
     }, [id, API_BASE_URL]);
 
-    if (loading) return <div className="loading-screen"><p>Loading medical report...</p></div>;
-    if (error) return <div className="error-screen"><h2>Error</h2><p>{error}</p></div>;
+    if (loading) {
+        return <div className="loading-screen"><p>Loading medical report...</p></div>;
+    }
+
+    if (error) {
+        return <div className="error-screen"><h2>Error</h2><p>{error}</p></div>;
+    }
 
     return (
         <div className="patient-page">
             <ThemeToggle />
+
             <header className="header">
                 <h1>⚕️ Patient Health Portal</h1>
-                <p>Official X-Ray Analysis & Fracture Diagnostics Report</p>
+                <p>AI-assisted X-Ray Diagnostic Report</p>
             </header>
 
             <main className="main-content">
                 <div className="results-section">
+
+                    {/* VISUALS */}
                     <div className="visuals">
                         <div className="image-card">
                             <h3>Original X-Ray</h3>
-                            <img src={data.image_base64} alt="Original X-Ray" />
+                            <p className="no-preview">
+                                Image not available (stored on server)
+                            </p>
                         </div>
+
                         <div className="image-card">
                             <h3>Diagnostic Overlay (Heatmap)</h3>
                             <img src={data.heatmap_base64} alt="Heatmap Result" />
+
                             <div className="heatmap-legend">
                                 <div className="legend-item">
-                                    <span className="dot hot"></span> <span>Pathology Focus</span>
+                                    <span className="dot hot"></span> Primary Focus
+                                </div>
+                                <div className="legend-item">
+                                    <span className="dot mid"></span> Supporting Region
+                                </div>
+                                <div className="legend-item">
+                                    <span className="dot cold"></span> Minimal Significance
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    {/* DIAGNOSIS */}
                     <div className="diagnosis-panel">
-                        <div className="patient-identity-box">
-                            <div className="id-item">
-                                <span className="label">Patient Name:</span>
-                                <span className="val">{data.patient_name}</span>
-                            </div>
-                            <div className="id-item">
-                                <span className="label">Patient ID:</span>
-                                <span className="val">#{data.patient_id}</span>
-                            </div>
-                            <div className="id-item">
-                                <span className="label">Record Date:</span>
-                                <span className="val">{data.timestamp}</span>
-                            </div>
-                        </div>
 
-                        <div className="panel-header" style={{ marginTop: '1.5rem' }}>
+                        <div className="panel-header">
                             <h2>Diagnostic Summary</h2>
-                            {data.approved && <span className="verified-badge">✓ Physician Validated</span>}
+
+                            {data.approved && (
+                                <span className="verified-badge">
+                                    ✓ Physician Validated
+                                </span>
+                            )}
                         </div>
 
-                        <div className={`diagnosis-badge ${data.diagnosis === 'Normal' ? 'normal' : 'fracture'}`}>
-                            {data.diagnosis}
+                        {!data.approved && (
+                            <p className="warning-text">
+                                ⚠️ Awaiting doctor validation
+                            </p>
+                        )}
+
+                        <div className={`diagnosis-badge ${data.prediction === 'Normal' ? 'normal' : 'fracture'}`}>
+                            {data.prediction}
                         </div>
 
-                        <p>Confidence Level: {(data.probability * 100).toFixed(1)}%</p>
+                        <p>
+                            Confidence Level: {(data.confidence * 100).toFixed(1)}%
+                        </p>
 
+                        {/* RISK */}
                         <div className="risk-meter">
-                            <h4>Recovery Risk: {data.risk_level}</h4>
+                            <h4>
+                                Severity Indicator: {data.risk_level} ({data.risk_score}/100)
+                            </h4>
+
                             <div className="progress-bar">
-                                <div className="progress-fill" style={{ width: `${data.risk_score}%` }}></div>
+                                <div
+                                    className="progress-fill"
+                                    style={{ width: `${data.risk_score}%` }}
+                                ></div>
                             </div>
                         </div>
 
-                        {data.doctor_notes && (
+                        {/* DOCTOR NOTES */}
+                        {data.notes && (
                             <div className="explanation-box" style={{ marginTop: '2rem', borderLeftColor: '#10b981' }}>
-                                <h3>Physician Recommendations</h3>
-                                <p className="exp-text" style={{ fontStyle: 'italic', color: '#1e293b' }}>
-                                    "{data.doctor_notes}"
+                                <h3>Physician Notes</h3>
+                                <p className="exp-text">
+                                    "{data.notes}"
                                 </p>
                             </div>
                         )}
 
+                        {/* INFO */}
                         <div className="explanation-box" style={{ marginTop: '2rem' }}>
-                            <h3>Patient Instructions</h3>
+                            <h3>Important Note</h3>
                             <p className="exp-text">
-                                This report was generated using AI-assisted diagnostic tools and {data.approved ? "has been validated by a licensed physician" : "is currently awaiting physician review"}.
+                                This report was generated using AI-assisted diagnostic tools and{" "}
+                                {data.approved
+                                    ? "has been reviewed by a doctor."
+                                    : "is pending doctor verification."}
                             </p>
                         </div>
+
                     </div>
                 </div>
-
-
             </main>
         </div>
     );
