@@ -1,5 +1,8 @@
-echo ".env" >> .gitignore
-echo "backend/.env" >> .gitignore
-echo "frontend/.env" >> .gitignore.env
+.env
 backend/.env
 frontend/.env
+
+__pycache__/
+*.pyc
+.DS_Store
+venv/
