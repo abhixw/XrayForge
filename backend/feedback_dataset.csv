@@ -1,0 +1,6 @@
+id,case_id,model_prediction,correct_label,confidence,image_path,created_at
+1,67b7cdf9-ff6b-46b5-9117-eb1f3b222f95,Normal,Fracture Detected,0.3950364291667938,uploads/67b7cdf9-ff6b-46b5-9117-eb1f3b222f95_forearm-x-ray-after-car-600nw-2291903371.webp,2026-04-03 16:13:19.540242
+2,c6d91509-a4f6-4af4-bdc0-f071da1a0d87,Normal,Fracture Detected,0.41870662569999695,uploads/c6d91509-a4f6-4af4-bdc0-f071da1a0d87_22990-humerus-fracture.jpg,2026-04-03 16:16:56.532578
+3,908dcc6d-fd39-4d77-abac-a38cc9f28cd2,Normal,Fracture Detected,0.38487666845321655,uploads/908dcc6d-fd39-4d77-abac-a38cc9f28cd2_compound-fracture-femur-bone-open-260nw-2550164673.webp,2026-04-03 16:17:06.349914
+4,65e080f3-1166-4665-b432-db2590f3095a,Normal,Fracture Detected,0.38187849521636963,uploads/65e080f3-1166-4665-b432-db2590f3095a_fracture.jpg,2026-04-03 16:17:18.747882
+5,f49fb21e-d91a-49bf-90d7-a190138db7cc,Normal,Fracture Detected,0.41332632303237915,uploads/f49fb21e-d91a-49bf-90d7-a190138db7cc_forearm-x-ray-after-car-600nw-2291903371.webp,2026-04-03 16:17:31.416366
