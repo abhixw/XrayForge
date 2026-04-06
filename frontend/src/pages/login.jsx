@@ -1,276 +1,240 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export default function Login() {
     const navigate = useNavigate();
+    const [role, setRole] = useState('doctor');
+
+    // Doctor / Admin fields
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+
+    // Patient fields
+    const [patientName, setPatientName] = useState('');
+    const [patientId, setPatientId] = useState('');
+    const [phone, setPhone] = useState('');
+    const [otp, setOtp] = useState('');
+    const [otpSent, setOtpSent] = useState(false);
+    const [demoOtp, setDemoOtp] = useState('');
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        if (!email || !password) {
-            setError('Please enter email and password');
+    const handleSendOtp = async () => {
+        if (!patientName.trim() || !patientId.trim() || !phone.trim()) {
+            setError('Please fill in all fields');
             return;
         }
-
         setLoading(true);
         setError('');
-
         try {
-            const resp = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            const res = await fetch(`${API_BASE_URL}/api/auth/patient/send-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ name: patientName, patient_id: patientId, phone })
             });
-
-            const data = await resp.json();
-
-            if (!resp.ok) {
-                setError(data.detail || 'Login failed. Please check your credentials.');
-                return;
-            }
-
-            // Save token and user info
-            localStorage.setItem('token', data.access_token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-
-            // Redirect based on role from backend
-            if (data.user.role === 'admin') {
-                navigate('/hospital');
-            } else if (data.user.role === 'doctor') {
-                navigate('/doctor');
-            } else if (data.user.role === 'patient') {
-                navigate('/patient-home');
+            const data = await res.json();
+            if (res.ok) {
+                setOtpSent(true);
+                setDemoOtp(data.otp); // demo only
             } else {
-                navigate('/login');
+                setError(data.detail || 'Patient not found. Please check your details.');
             }
-
-        } catch (err) {
-            setError('Cannot connect to server. Please try again.');
+        } catch {
+            setError('Server error. Is the backend running?');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleVerifyOtp = async () => {
+        if (!otp.trim()) { setError('Please enter the OTP'); return; }
+        setLoading(true);
+        setError('');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/auth/patient/verify-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, otp })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                navigate('/patient-home');
+            } else {
+                setError(data.detail || 'Invalid OTP');
+            }
+        } catch {
+            setError('Server error.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) { setError('Please fill in all fields'); return; }
+        setLoading(true);
+        setError('');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, role })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                if (data.user.role === 'doctor') navigate('/doctor');
+                else if (data.user.role === 'admin') navigate('/hospital');
+            } else {
+                setError(data.detail || 'Invalid credentials');
+            }
+        } catch {
+            setError('Server error. Is the backend running?');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const roleColors = {
+        doctor: '#1a6fd4',
+        admin: '#2d9e5f',
+        patient: '#7c3aed'
+    };
+    const color = roleColors[role];
+
     return (
         <>
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body { font-family: 'DM Sans', sans-serif; background: #f4f7fc; }
+                .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+                .login-card { background: white; border-radius: 24px; padding: 48px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
+                .brand { text-align: center; margin-bottom: 36px; }
+                .brand-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 16px; }
+                .brand-title { font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; color: #1a2236; }
+                .brand-sub { color: #64748b; font-size: 14px; margin-top: 6px; }
+                .role-tabs { display: flex; background: #f1f5f9; border-radius: 12px; padding: 4px; margin-bottom: 28px; gap: 4px; }
+                .role-tab { flex: 1; padding: 10px; border-radius: 10px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; background: transparent; color: #64748b; transition: 0.2s; font-family: 'DM Sans', sans-serif; }
+                .role-tab.active { background: white; color: #1a2236; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+                .field { margin-bottom: 18px; }
+                .field label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+                .field input { width: 100%; padding: 14px 16px; border: 1.5px solid #e2e8f2; border-radius: 10px; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: 0.2s; background: #fafbfc; }
+                .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1); background: white; }
+                .btn-main { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; font-family: 'DM Sans', sans-serif; color: white; }
+                .btn-main:hover { opacity: 0.9; transform: translateY(-1px); }
+                .btn-main:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+                .btn-outline { width: 100%; padding: 14px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; background: transparent; transition: 0.2s; margin-bottom: 12px; }
+                .error-box { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-bottom: 16px; }
+                .otp-demo { background: #fef9c3; border: 1px solid #fde047; color: #854d0e; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-bottom: 16px; text-align: center; }
+                .otp-demo strong { font-size: 24px; display: block; margin-top: 4px; letter-spacing: 6px; }
+                .divider { text-align: center; color: #94a3b8; font-size: 13px; margin: 20px 0; }
+                .signup-link { text-align: center; font-size: 14px; color: #64748b; margin-top: 20px; }
+                .signup-link a { color: #1a6fd4; font-weight: 600; cursor: pointer; text-decoration: none; }
+            `}</style>
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-          font-family: 'DM Sans', sans-serif;
-          background: #f4f7fc;
-          min-height: 100vh;
-        }
-
-        .auth-layout {
-          min-height: 100vh;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-        }
-
-        /* LEFT PANEL */
-        .auth-left {
-          background: #0f1e3d;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          padding: 60px 48px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .brand-logo {
-          width: 64px; height: 64px;
-          background: linear-gradient(135deg, #1a6fd4, #2d9e5f);
-          border-radius: 18px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 30px;
-          margin: 0 auto 24px;
-        }
-
-        .brand-name {
-          font-family: 'Space Grotesk', sans-serif;
-          font-size: 32px;
-          font-weight: 700;
-          color: #fff;
-          margin-bottom: 8px;
-        }
-
-        .brand-sub {
-          font-size: 14px;
-          color: rgba(255,255,255,0.5);
-          margin-bottom: 48px;
-          line-height: 1.6;
-        }
-
-        /* RIGHT PANEL */
-        .auth-right {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 48px 32px;
-          background: #f4f7fc;
-        }
-
-        .auth-card {
-          background: #fff;
-          border-radius: 20px;
-          padding: 40px;
-          width: 100%;
-          max-width: 420px;
-          border: 1px solid #e2e8f2;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-        }
-
-        .auth-title {
-          font-family: 'Space Grotesk', sans-serif;
-          font-size: 24px;
-          font-weight: 700;
-          color: #1a2236;
-          margin-bottom: 6px;
-        }
-
-        .auth-sub {
-          font-size: 14px;
-          color: #6b7a99;
-          margin-bottom: 32px;
-        }
-
-        .field-group {
-          margin-bottom: 16px;
-        }
-
-        .field-label {
-          font-size: 12px;
-          font-weight: 600;
-          color: #6b7a99;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          margin-bottom: 6px;
-        }
-
-        .field-input {
-          width: 100%;
-          padding: 12px 16px;
-          border: 1.5px solid #e2e8f2;
-          border-radius: 10px;
-          font-size: 14px;
-          font-family: 'DM Sans', sans-serif;
-          color: #1a2236;
-          background: #fff;
-          outline: none;
-        }
-
-        .field-input:focus { border-color: #1a6fd4; }
-
-        .submit-btn {
-          width: 100%;
-          padding: 13px;
-          background: #1a6fd4;
-          color: #fff;
-          border: none;
-          border-radius: 10px;
-          font-size: 15px;
-          font-weight: 600;
-          cursor: pointer;
-          margin-top: 8px;
-        }
-
-        .submit-btn:hover { background: #155db8; }
-        .submit-btn:disabled { background: #b0c4de; cursor: not-allowed; }
-
-        .error-box {
-          background: #fef0f0;
-          border: 1px solid #f5c2c2;
-          border-radius: 10px;
-          padding: 10px 14px;
-          font-size: 13px;
-          color: #d63c3c;
-          margin: 12px 0;
-        }
-
-        .auth-footer {
-          text-align: center;
-          margin-top: 24px;
-          font-size: 13px;
-          color: #6b7a99;
-        }
-
-        .auth-footer a {
-          color: #1a6fd4;
-          font-weight: 600;
-          text-decoration: none;
-        }
-      `}</style>
-
-            <div className="auth-layout">
-
-                {/* Left Branding Panel */}
-                <div className="auth-left">
-                    <div className="left-content">
-                        <div className="brand-logo">🩻</div>
-                        <div className="brand-name">XrayForge</div>
-                        <div className="brand-sub">
-                            AI-powered Clinical Decision Support System for fracture detection and diagnosis.
+            <div className="login-wrap" style={{ '--accent': color, '--accent-rgb': role === 'doctor' ? '26,111,212' : role === 'admin' ? '45,158,95' : '124,58,237' }}>
+                <div className="login-card">
+                    <div className="brand">
+                        <div className="brand-icon" style={{ background: `${color}20` }}>
+                            {role === 'doctor' ? '👨‍⚕️' : role === 'admin' ? '🏥' : '🧑‍💼'}
                         </div>
+                        <div className="brand-title">FractureAI</div>
+                        <div className="brand-sub">AI-Powered Fracture Detection System</div>
                     </div>
-                </div>
 
-                {/* Right Login Form */}
-                <div className="auth-right">
-                    <div className="auth-card">
-                        <div className="auth-title">Welcome back</div>
-                        <div className="auth-sub">Sign in to your account to continue</div>
-
-                        {error && <div className="error-box">{error}</div>}
-
-                        <form onSubmit={handleLogin}>
-                            <div className="field-group">
-                                <div className="field-label">EMAIL ADDRESS</div>
-                                <input
-                                    className="field-input"
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className="field-group">
-                                <div className="field-label">PASSWORD</div>
-                                <input
-                                    className="field-input"
-                                    type="password"
-                                    placeholder="Enter your password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="submit-btn"
-                                disabled={loading}
-                            >
-                                {loading ? 'Signing in...' : 'Sign In'}
+                    {/* Role Tabs */}
+                    <div className="role-tabs">
+                        {[{ id: 'doctor', label: '👨‍⚕️ Doctor' }, { id: 'admin', label: '🏥 Hospital' }, { id: 'patient', label: '🧑‍💼 Patient' }].map(r => (
+                            <button key={r.id} className={`role-tab ${role === r.id ? 'active' : ''}`}
+                                onClick={() => { setRole(r.id); setError(''); setOtpSent(false); setDemoOtp(''); }}>
+                                {r.label}
                             </button>
-                        </form>
-
-                        <div className="auth-footer">
-                            Don't have an account?{' '}
-                            <Link to="/signup">Create one here</Link>
-                        </div>
+                        ))}
                     </div>
+
+                    {error && <div className="error-box">{error}</div>}
+
+                    {/* Doctor / Admin Login */}
+                    {(role === 'doctor' || role === 'admin') && (
+                        <>
+                            <div className="field">
+                                <label>Email Address</label>
+                                <input type="email" placeholder="your@email.com" value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+                            </div>
+                            <div className="field">
+                                <label>Password</label>
+                                <input type="password" placeholder="••••••••" value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+                            </div>
+                            <button className="btn-main" style={{ background: color }} onClick={handleLogin} disabled={loading}>
+                                {loading ? 'Signing in...' : `Sign in as ${role === 'doctor' ? 'Doctor' : 'Hospital Admin'}`}
+                            </button>
+                            <div className="signup-link">
+                                Don't have an account? <a onClick={() => navigate('/signup')}>Create one here</a>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Patient Login */}
+                    {role === 'patient' && !otpSent && (
+                        <>
+                            <div className="field">
+                                <label>Full Name</label>
+                                <input type="text" placeholder="As registered by hospital" value={patientName}
+                                    onChange={e => setPatientName(e.target.value)} />
+                            </div>
+                            <div className="field">
+                                <label>Patient ID</label>
+                                <input type="text" placeholder="e.g. PT-001" value={patientId}
+                                    onChange={e => setPatientId(e.target.value)} />
+                            </div>
+                            <div className="field">
+                                <label>Registered Phone Number</label>
+                                <input type="tel" placeholder="e.g. 9876543210" value={phone}
+                                    onChange={e => setPhone(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSendOtp()} />
+                            </div>
+                            <button className="btn-main" style={{ background: color }} onClick={handleSendOtp} disabled={loading}>
+                                {loading ? 'Verifying...' : 'Send OTP'}
+                            </button>
+                        </>
+                    )}
+
+                    {role === 'patient' && otpSent && (
+                        <>
+                            {demoOtp && (
+                                <div className="otp-demo">
+                                    🔐 Demo OTP (would be sent via SMS in production)
+                                    <strong>{demoOtp}</strong>
+                                </div>
+                            )}
+                            <div className="field">
+                                <label>Enter OTP</label>
+                                <input type="text" placeholder="6-digit OTP" value={otp}
+                                    onChange={e => setOtp(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
+                                    maxLength={6} style={{ letterSpacing: '6px', fontSize: '20px', textAlign: 'center' }} />
+                            </div>
+                            <button className="btn-main" style={{ background: color }} onClick={handleVerifyOtp} disabled={loading}>
+                                {loading ? 'Verifying...' : 'Verify OTP & Login'}
+                            </button>
+                            <div className="divider">
+                                Wrong number? <span style={{ color, cursor: 'pointer', fontWeight: 600 }}
+                                    onClick={() => { setOtpSent(false); setOtp(''); setDemoOtp(''); setError(''); }}>
+                                    Go back
+                                </span>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </>
